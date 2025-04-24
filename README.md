@@ -1,53 +1,45 @@
-# Bonus Certificate Bates Hedging Project
+# Bonus Certificate Pricing and Hedging
+
+This repository contains the implementation and analysis for pricing and hedging a **Bonus Certificate (BC)** linked to a specific stock (AIG in this case). The Bonus Certificate is an exotic financial product that provides potential upside with a cap, contingent on the stock price and certain barriers.
 
 ## Overview
-This project is designed to facilitate the design and hedging of a Bonus Certificate (BC) linked to a specific stock. The Bonus Certificate is a financial instrument that provides a payout based on the performance of an underlying asset, typically a stock. This project includes various components that help in calculating payouts, estimating dividends, and understanding the Bates formula, which is crucial for pricing such exotic options.
 
-## Project Structure
-The project is organized into the following directories and files:
+A Bonus Certificate (BC) provides an investor with exposure to a stock while offering an additional bonus payment if the stock price stays above a specified barrier level during the life of the product. However, if the stock price falls below a **lower barrier**, the bonus is no longer paid. The product has a single maturity and no principal protection.
 
-- **src/**
-  - **main.py**: Entry point of the application that orchestrates the various components.
-  - **payout/**
-    - **display_payout.py**: Functions to calculate and display payout scenarios based on stock price at maturity and defined barriers.
-  - **interest_rates/**
-    - **calculate_forward_rates.py**: Functions to calculate interest rates based on forward prices.
-  - **dividends/**
-    - **estimate_dividends.py**: Functions to estimate dividends for the underlying stock.
-  - **bates_formula/**
-    - **explain_bates.py**: Explanation of the Bates formula and its application in pricing the Bonus Certificate.
-  - **bank_positions/**
-    - **exotic_options.py**: Discussion on the bank's positions in exotic options and related strategies.
+### Payoff Structure
 
-- **requirements.txt**: Lists the dependencies required for the project.
-- **.gitignore**: Specifies files and directories to be ignored by version control.
-- **README.md**: Documentation for the project.
+The payoff at maturity depends on the stock price at that time, the barrier levels, and whether the stock has breached the lower barrier level during the product's life.
 
-## Installation
-To set up the project, clone the repository and install the required dependencies:
+The three main payoff scenarios are:
 
-```bash
-git clone <repository-url>
-cd bonus-certificate-bates-hedging
-pip install -r requirements.txt
-```
+1. **Stock Price Above Bonus Level (B):**
+   - If the stock price ends up above the bonus level $\( B \)$, the investor receives the value of the stock at maturity $\( S_T \)$.
+   - **Payoff:** $\( \text{payoff}_{BC} = S_T \)$
 
-## Usage
-To run the application, execute the following command:
+2. **Stock Price Between Barrier (L) and Bonus Level (B):**
+   - If the stock price ends up between the barrier $\( L \)$ and the bonus $\( B \)$, and the stock price has never fallen below the lower barrier $\( H \)$, the investor receives the bonus $\( B \)$.
+   - **Payoff:** $\( \text{payoff}_{BC} = B \)$
 
-```bash
-python src/main.py
-```
+3. **Stock Price Hits the Lower Barrier (H):**
+   - If the stock price hits the lower barrier $\( H \)$ at least once during the life of the product, the investor receives the value of the stock at maturity.
+   - **Payoff:** $\( \text{payoff}_{BC} = S_T \)$
 
-## Components
-- **Payout Calculation**: The project includes functionality to calculate and display various payout scenarios based on the stock price at maturity.
-- **Interest Rate Calculation**: Functions to compute interest rates based on forward prices are provided, which are essential for accurate pricing of the Bonus Certificate.
-- **Dividend Estimation**: The project estimates dividends for the underlying stock, which are crucial for the valuation of the Bonus Certificate.
-- **Bates Formula Explanation**: A detailed explanation of the Bates formula is included, highlighting its significance in the pricing of the Bonus Certificate.
-- **Bank Positions in Exotic Options**: The project discusses the bank's positions in exotic options, including strategies involving risk-free bank accounts and other financial instruments.
+### Structure of the Product
 
-## Contributing
-Contributions to the project are welcome. Please submit a pull request or open an issue for any enhancements or bug fixes.
+- **Underlying Asset:** Stock of AIG
+- **Maturity:** At a specified date
+- **Bonus Level (B):** The level at which the product pays out if the stock price is above it at maturity.
+- **Barrier Level (L):** The level between which the stock must end up for the bonus to be paid.
+- **Lower Barrier (H):** If the stock price hits this barrier at any time during the product's life, the investor will receive the stock price at maturity.
 
-## License
-This project is licensed under the MIT License. See the LICENSE file for more details.
+### Bank’s Strategy
+
+To hedge the Bonus Certificate, the bank will:
+- **Long the stock** to capture dividends.
+- **Sell a Down-and-In Binary Put (DIBP)** at the lower barrier $\( L \)$.
+- **Buy a Down-and-In Binary Put (DIBP)** at the higher barrier $\( H \)$.
+- These positions are combined to create a **synthetic payout** similar to the Bonus Certificate payoff.
+- The bank’s exposure is between the barriers $\( H \)$ and $\( L \)$, and its maximum loss will be covered by a **risk-free bank account**.
+
+
+
