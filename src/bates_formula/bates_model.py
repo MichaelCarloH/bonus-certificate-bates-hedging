@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
-from tiny_pricing_utils.characteristic_function import cf_Bates
+from .characteristic_function import cf_Bates
 
 class BatesModel:
     def __init__(self, 
@@ -139,31 +139,70 @@ class BatesModel:
         self.compute_fft(rule, simpson_weights)
         return self.interpolate_prices()
 
-def explain_bates():
-    """
-    Explains the Bates formula and its significance in pricing Bonus Certificates.
+    def price_put_options(self, rule="rectangular", simpson_weights=None):
+        """Price put options using put-call parity."""
+        # Calculate call prices first
+        call_prices = self.price_options(rule, simpson_weights)
 
-    The Bates formula is a mathematical model used to price options, particularly in the context of 
-    exotic options like Bonus Certificates. It combines the features of the Black-Scholes model 
-    with a jump diffusion process, allowing for the incorporation of sudden price changes in the 
-    underlying asset. This is particularly relevant for assets that exhibit jumps due to news 
-    events or other market dynamics.
+        # Apply put-call parity to calculate put prices
+        put_prices = call_prices - self.S0 * np.exp(-self.q * self.T) + self.strikes * np.exp(-self.r * self.T)
+        return put_prices
 
-    Key components of the Bates formula include:
+    def calculate_greeks(self, rule="rectangular", simpson_weights=None):
+        """Calculate option Greeks (Delta, Gamma, Vega, Theta, Rho)."""
+        # Calculate base option prices
+        base_prices = self.price_options(rule, simpson_weights)
 
-    1. **Volatility**: The model accounts for both continuous and jump volatility, providing a 
-       more accurate representation of the underlying asset's price movements.
+        # Finite difference step size
+        epsilon = 1e-5
 
-    2. **Jump Intensity**: This parameter captures the frequency of jumps in the asset price, 
-       which can significantly impact the pricing of options.
+        # Delta: Sensitivity to changes in the underlying price
+        self.S0 += epsilon
+        prices_up = self.price_options(rule, simpson_weights)
+        self.S0 -= 2 * epsilon
+        prices_down = self.price_options(rule, simpson_weights)
+        self.S0 += epsilon  # Reset to original value
+        delta = (prices_up - prices_down) / (2 * epsilon)
 
-    3. **Jump Size Distribution**: The formula allows for the modeling of the size of jumps, 
-       which can be critical in assessing the risk and potential returns of the Bonus Certificate.
+        # Gamma: Sensitivity of Delta to changes in the underlying price
+        gamma = (prices_up - 2 * base_prices + prices_down) / (epsilon**2)
 
-    The Bates formula is particularly useful for pricing Bonus Certificates linked to stocks that 
-    are subject to high volatility and sudden price changes. By incorporating these factors, 
-    financial institutions can better assess the value of the Bonus Certificate and manage their 
-    risk exposure effectively.
-    """
-    print("Bates Formula Explanation:")
-    print(explain_bates.__doc__)
+        # Vega: Sensitivity to changes in volatility
+        self.V0 += epsilon
+        prices_vega = self.price_options(rule, simpson_weights)
+        self.V0 -= epsilon  # Reset to original value
+        vega = (prices_vega - base_prices) / epsilon
+
+        # Theta: Sensitivity to changes in time to maturity
+        self.T -= epsilon
+        prices_theta = self.price_options(rule, simpson_weights)
+        self.T += epsilon  # Reset to original value
+        theta = (prices_theta - base_prices) / epsilon
+
+        # Rho: Sensitivity to changes in the risk-free rate
+        self.r += epsilon
+        prices_rho = self.price_options(rule, simpson_weights)
+        self.r -= epsilon  # Reset to original value
+        rho = (prices_rho - base_prices) / epsilon
+
+        return {
+            "Delta": delta,
+            "Gamma": gamma,
+            "Vega": vega,
+            "Theta": theta,
+            "Rho": rho
+        }
+
+    def calculate_pricing_error(self, market_prices, strikes, option_type="call", rule="rectangular", simpson_weights=None):
+        """Calculate the total pricing error (sum of squared errors) for puts or calls."""
+        if option_type == "call":
+            model_prices = self.price_options(rule, simpson_weights)
+        elif option_type == "put":
+            model_prices = self.price_put_options(rule, simpson_weights)
+        else:
+            raise ValueError("Invalid option type. Use 'call' or 'put'.")
+
+        # Calculate the sum of squared errors
+        pricing_error = np.sum((np.array(model_prices) - np.array(market_prices))**2)
+        return pricing_error
+
