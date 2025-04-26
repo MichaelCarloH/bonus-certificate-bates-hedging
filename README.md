@@ -32,14 +32,11 @@ The three main payoff scenarios are:
 - **Barrier Level (L):** The level between which the stock must end up for the bonus to be paid.
 - **Lower Barrier (H):** If the stock price hits this barrier at any time during the product's life, the investor will receive the stock price at maturity.
 
-### Bank’s Strategy
+### Bank’s Strategy Summary
 
-To hedge the Bonus Certificate, the bank will:
-- **Long the stock** to capture dividends.
-- **Sell a Down-and-In Binary Put (DIBP)** at the lower barrier $\( L \)$.
-- **Buy a Down-and-In Binary Put (DIBP)** at the higher barrier $\( H \)$.
-- These positions are combined to create a **synthetic payout** similar to the Bonus Certificate payoff.
-- The bank’s exposure is between the barriers $\( H \)$ and $\( L \)$, and its maximum loss will be covered by a **risk-free bank account**.
+Yes, at the most basic level, the core components of the hedge involve being:
 
+* **Long Stock**
+* **Long the specific exotic option** that provides the conditional bonus.
 
-
+Specifically, for the uncapped Bonus Certificate, this option is a **Down-and-Out Put** (Strike \(B\), Barrier \(L\)). The bank holds the stock for the base payoff and synthetically replicates the long position in this option via dynamic hedging to cover the bonus feature. So, "long stock, long option" – there we go!
