@@ -32,7 +32,7 @@ def calculate_bonus_certificate_payout(stock_price_at_maturity, bonus_level, low
     return payout
 
 
-def plot_payout(bonus_level, lower_barrier):
+def plot_payout(bonus_level, lower_barrier, S0):
     """
     Plot the payout of the Bonus Certificate for both cases: barrier hit and not hit.
     """
@@ -59,6 +59,27 @@ def plot_payout(bonus_level, lower_barrier):
         mode='lines', name='Barrier Not Hit',
         line=dict(color='green', shape='hv')  # Use 'hv' for step-like behavior
     ))
+
+    # Add a vertical line for the input stock price S0
+    fig.add_trace(go.Scatter(
+        x=[S0, S0], y=[0, max(payouts_barrier_hit + payouts_barrier_not_hit)],
+        mode='lines', name=f'Current Stock Price (S0 = {S0})',
+        line=dict(color='blue', dash='dash')
+    ))
+
+    # Add vertical lines for the lower and bonus barrier levels
+    fig.add_trace(go.Scatter(
+        x=[lower_barrier, lower_barrier], y=[0, max(payouts_barrier_hit + payouts_barrier_not_hit)],
+        mode='lines', name=f'Lower Barrier (H = {lower_barrier})',
+        line=dict(color='orange', dash='dot')
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=[bonus_level, bonus_level], y=[0, max(payouts_barrier_hit + payouts_barrier_not_hit)],
+        mode='lines', name=f'Bonus Level (B = {bonus_level})',
+        line=dict(color='green', dash='dot')
+    ))
+
 
     # Customize the layout
     fig.update_layout(
