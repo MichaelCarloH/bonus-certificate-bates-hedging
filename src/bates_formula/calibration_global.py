@@ -15,7 +15,7 @@ class BatesModelGlobalCalibrator:
 
     def calibrate_global_model(self):
         # Ensure all maturities are processed and combined
-        processor = MarketDataProcessor(self.data_folder)
+        processor = MarketDataProcessor(self.data_folder, self.S0)
         processor.load_and_process_data()
         data_by_maturity = processor.get_data_by_maturity()
 
