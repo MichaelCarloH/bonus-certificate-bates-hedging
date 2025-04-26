@@ -17,6 +17,9 @@ class MarketDataProcessor:
                 file_path = os.path.join(self.data_folder, file_name)
                 df = pd.read_csv(file_path)
 
+                # Add the Maturity column
+                df['Maturity'] = maturity
+
                 # Store the DataFrame by maturity
                 self.data_by_maturity[maturity] = df
 
@@ -29,6 +32,12 @@ class MarketDataProcessor:
 
     def get_data_by_maturity(self):
         return self.data_by_maturity
+
+    def get_dataframes_list(self):
+        """
+        Returns a list of DataFrames, each corresponding to a maturity.
+        """
+        return list(self.data_by_maturity.values())
 
 # Example usage:
 # processor = MarketDataProcessor("../data/marketDataClose25-04")
