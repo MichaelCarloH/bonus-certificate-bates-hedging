@@ -1,0 +1,36 @@
+class MarketDataProcessor:
+    def __init__(self, data_folder):
+        self.data_folder = data_folder
+        self.data_by_maturity = {}
+
+    def load_and_process_data(self):
+        import os
+        import pandas as pd
+
+        # Iterate through all CSV files in the data folder
+        for file_name in os.listdir(self.data_folder):
+            if file_name.endswith('.csv'):
+                # Extract maturity from the file name (assumes MMDDYY format)
+                maturity = self._extract_maturity_from_filename(file_name)
+
+                # Load the CSV file into a DataFrame
+                file_path = os.path.join(self.data_folder, file_name)
+                df = pd.read_csv(file_path)
+
+                # Store the DataFrame by maturity
+                self.data_by_maturity[maturity] = df
+
+    def _extract_maturity_from_filename(self, file_name):
+        # Extract MMDDYY from the file name and convert to a readable format
+        month = file_name[:2]
+        day = file_name[2:4]
+        year = '20' + file_name[4:6]  # Assumes 21st century
+        return f"{month}/{day}/{year}"
+
+    def get_data_by_maturity(self):
+        return self.data_by_maturity
+
+# Example usage:
+# processor = MarketDataProcessor("../data/marketDataClose25-04")
+# processor.load_and_process_data()
+# data_by_maturity = processor.get_data_by_maturity()
