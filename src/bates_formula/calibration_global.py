@@ -17,13 +17,12 @@ class BatesModelGlobalCalibrator:
         # Ensure all maturities are processed and combined
         processor = MarketDataProcessor(self.data_folder, self.S0)
         processor.load_and_process_data()
-        data_by_maturity = processor.get_data_by_maturity()
 
         # Combine all data into a single DataFrame
-        combined_data = pd.concat(data_by_maturity.values(), ignore_index=True)
+        combined_data = processor.combined_data
 
         # Extract market prices, strikes, and maturities
-        self.market_prices = (combined_data['Bid_Call'] + combined_data['Ask_Call']) / 2  # Mid prices for calls
+        self.market_prices = (combined_data['Mid_Price']) 
         self.strikes = combined_data['Strike']
         self.maturities = combined_data['Maturity'].apply(self._calculate_time_to_maturity)
 
