@@ -140,7 +140,8 @@ class BatesModel:
         """Price options based on selected integration rule."""
         self.compute_fft(rule, simpson_weights)
         return self.interpolate_prices()
-
+    
+    
     def price_put_options(self, rule="rectangular", simpson_weights=None):
         """Price put options using put-call parity."""
         # Calculate call prices first
@@ -225,8 +226,10 @@ class BatesModel:
       
 
         # Filter out-of-the-money (OTM) options
-        otm_calls = combined_data[(combined_data['Strike'] > self.S0) & (combined_data['Bid_Call'] > 0)].copy()
-        otm_puts = combined_data[(combined_data['Strike'] < self.S0) & (combined_data['Bid_Put'] > 0)].copy()
+        otm_calls = combined_data[(combined_data['Strike'] > self.S0) & (combined_data['Bid_Call'] >= 0)].copy()
+        otm_puts = combined_data[(combined_data['Strike'] < self.S0) & (combined_data['Bid_Put'] >= 0)].copy()
+        print("otm_calls: ", otm_calls.shape)
+        print("otm_puts: ", otm_puts.shape)
 
         # Combine OTM calls and puts
         otm_options = pd.concat([otm_calls, otm_puts], ignore_index=True)
