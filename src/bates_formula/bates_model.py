@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
 from .characteristic_function import cf_Bates
+from datetime import datetime
 
 class BatesModel:
     def __init__(self, 
@@ -144,8 +146,11 @@ class BatesModel:
         # Calculate call prices first
         call_prices = self.price_options(rule, simpson_weights)
 
+        # Ensure self.strikes is a NumPy array
+        strikes = np.array(self.strikes)
+
         # Apply put-call parity to calculate put prices
-        put_prices = call_prices - self.S0 * np.exp(-self.q * self.T) + self.strikes * np.exp(-self.r * self.T)
+        put_prices = call_prices - self.S0 * np.exp(-self.q * self.T) + strikes * np.exp(-self.r * self.T)
         return put_prices
 
     def calculate_greeks(self, rule="rectangular", simpson_weights=None):
@@ -205,4 +210,58 @@ class BatesModel:
         # Calculate the sum of squared errors
         pricing_error = np.sum((np.array(model_prices) - np.array(market_prices))**2)
         return pricing_error
+
+    def price_options_for_all_maturities(self, combined_data, start_date):
+        """
+        Price options for all strikes and maturities in the combined data.
+
+        Parameters:
+            combined_data (DataFrame): The combined data containing strikes, maturities, and market prices.
+            start_date (datetime): The start date for calculating time to maturity.
+
+        Returns:
+            DataFrame: The input DataFrame with an additional column for Bates model prices.
+        """
+      
+
+        # Filter out-of-the-money (OTM) options
+        otm_calls = combined_data[(combined_data['Strike'] > self.S0) & (combined_data['Bid_Call'] > 0)].copy()
+        otm_puts = combined_data[(combined_data['Strike'] < self.S0) & (combined_data['Bid_Put'] > 0)].copy()
+
+        # Combine OTM calls and puts
+        otm_options = pd.concat([otm_calls, otm_puts], ignore_index=True)
+
+        # Calculate time to maturity for each option
+        otm_options['Time_to_Maturity'] = otm_options['Maturity'].apply(
+            lambda maturity: (datetime.strptime(maturity, "%m/%d/%Y") - start_date).days / 365.0
+        )
+
+        # Initialize a list to store Bates prices
+        bates_prices = []
+
+        # Iterate over each row to calculate Bates prices
+        for _, row in otm_options.iterrows():
+            maturity = row['Time_to_Maturity']
+            strike = row['Strike']
+
+            # Determine if the option is a call or a put
+            if row['Strike'] > self.S0:  # Call option
+                price = BatesModel(
+                    self.S0, self.r, self.q, self.V0, self.kappa, self.eta, self.theta, self.rho,
+                    maturity, strikes=[strike], jump_intensity=self.jump_intensity,
+                    jump_mean=self.jump_mean, jump_stddev=self.jump_stddev
+                ).price_options()[0]
+            else:  # Put option
+                price = BatesModel(
+                    self.S0, self.r, self.q, self.V0, self.kappa, self.eta, self.theta, self.rho,
+                    maturity, strikes=[strike], jump_intensity=self.jump_intensity,
+                    jump_mean=self.jump_mean, jump_stddev=self.jump_stddev
+                ).price_put_options()[0]
+
+            bates_prices.append(price)
+
+        # Add Bates prices to the DataFrame
+        otm_options['Bates_Price'] = bates_prices
+
+        return otm_options
 

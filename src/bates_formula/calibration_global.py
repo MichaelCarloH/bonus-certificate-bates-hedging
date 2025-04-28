@@ -6,25 +6,23 @@ from scipy.optimize import minimize
 from datetime import datetime
 
 class BatesModelGlobalCalibrator:
-    def __init__(self, data_folder, S0, r, q, date = datetime.now()):
+    def __init__(self, data_folder, S0, r, q, date=None, combined_data=None):
         self.data_folder = data_folder
         self.S0 = S0
         self.r = r
         self.q = q
         self.global_calibrated_params = {}
+        self.date = date if date else datetime.now()
+        self.combined_data = combined_data
 
-    def calibrate_global_model(self):
-        # Ensure all maturities are processed and combined
-        processor = MarketDataProcessor(self.data_folder, self.S0)
-        processor.load_and_process_data()
+    def calibrate_global_model(self, combined_data, date=None):
+        # Use the provided date or default to the instance's date
+        date = date if date else self.date
 
-        # Combine all data into a single DataFrame
-        combined_data = processor.combined_data
-
-        # Extract market prices, strikes, and maturities
-        self.market_prices = (combined_data['Mid_Price']) 
-        self.strikes = combined_data['Strike']
-        self.maturities = combined_data['Maturity'].apply(self._calculate_time_to_maturity)
+        # Calculate time to maturity
+        combined_data['Time_to_Maturity'] = combined_data['Maturity'].apply(
+            lambda maturity: self._calculate_time_to_maturity(maturity, date)
+        )
 
         # Initial guess for parameters
         initial_params = {
@@ -43,33 +41,33 @@ class BatesModelGlobalCalibrator:
             self._total_error,
             x0=list(initial_params.values()),
             bounds=list(bounds.values()),
-            method='L-BFGS-B'
+            method='L-BFGS-B',
+            args=(combined_data, date)
         )
 
         # Store the calibrated parameters
         self.global_calibrated_params = dict(zip(initial_params.keys(), result.x))
 
-    def _total_error(self, params):
+    def _total_error(self, params, combined_data, date):
         # Unpack parameters
         V0, kappa, eta, theta, rho, jump_intensity, jump_mean, jump_stddev = params
 
-        # Calculate model prices for all maturities
-        model_prices = []
-        for strike, maturity in zip(self.strikes, self.maturities):
-            model_price = BatesModel(
-                self.S0, self.r, self.q, V0, kappa, eta, theta, rho, maturity,
-                strikes=[strike], jump_intensity=jump_intensity, jump_mean=jump_mean, jump_stddev=jump_stddev
-            ).price_options()[0]
-            model_prices.append(model_price)
+        # Create a BatesModel instance
+        bates_model = BatesModel(
+            self.S0, self.r, self.q, V0, kappa, eta, theta, rho,
+            jump_intensity=jump_intensity, jump_mean=jump_mean, jump_stddev=jump_stddev
+        )
+
+        # Price options for all maturities
+        priced_data = bates_model.price_options_for_all_maturities(combined_data, date)
 
         # Calculate total squared error
-        return np.sum((np.array(model_prices) - np.array(self.market_prices))**2)
+        return np.sum((priced_data['Bates_Price'] - priced_data['Mid_Price'])**2)
 
-    def _calculate_time_to_maturity(self, maturity):
+    def _calculate_time_to_maturity(self, maturity, date):
         from datetime import datetime
         maturity_date = datetime.strptime(maturity, "%m/%d/%Y")
-        current_date = datetime.now()
-        return (maturity_date - current_date).days / 365.0
+        return (maturity_date - date).days / 365.0
 
     def get_global_calibrated_params(self):
         return {
@@ -83,6 +81,6 @@ class BatesModelGlobalCalibrator:
 
 # Example usage:
 # global_calibrator = BatesModelGlobalCalibrator("../data/marketDataClose25-04", S0=77.56, r=0.02, q=0.01)
-# global_calibrator.calibrate_global_model()
+# global_calibrator.calibrate_global_model(combined_data)
 # global_params = global_calibrator.get_global_calibrated_params()
 # print(global_params)
