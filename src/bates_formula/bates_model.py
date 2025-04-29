@@ -94,7 +94,7 @@ class BatesModel:
         if rule == "rectangular":
             return self.compute_fft_rectangular()
         elif rule == "simpson":
-            return self.compute_fft_simpson(simpson_weights)
+            return self.compute_fft_simpson()
         else:
             raise ValueError(f"Unsupported rule: {rule}")
 
@@ -108,39 +108,52 @@ class BatesModel:
         # Compute call option prices
         self.calls_rectangular = (1 / np.pi) * np.exp(-self.alpha * self.log_strikes) * a_rectangular
 
-    def compute_fft_simpson(self, simpson_weights):
+    def compute_fft_simpson(self):
         """Computes option prices using FFT with Simpson's rule."""
-        # Apply Simpson's Rule correction in the FFT computation
-        simpson_int = simpson_weights
+        # Define Simpson's Rule coefficients
+        simpson_1 = 1 / 3  # First coefficient
+        simpson = (3 + (-1)**np.arange(2, self.N + 1)) / 3  # Alternating coefficients starting from index 2
+        simpson_weights = np.concatenate(([simpson_1], simpson))  # Combine with the first coefficient
 
-        # Perform FFT with the Simpson's Rule weights
-        fft_result_simpson = np.fft.fft(np.exp(1j * self.v * self.b) * self.rho_cm * self.eta_cm * simpson_int)
+        # Debug: Print Simpson's weights
+        print("Simpson Weights (sample):", simpson_weights[:10])
 
-        # Extract real part
+        # Apply weights to the characteristic function
+        weighted_rho_cm = self.rho_cm * simpson_weights * self.eta_cm
+
+        # Perform FFT with the weighted characteristic function
+        fft_result_simpson = np.fft.fft(np.exp(1j * self.v * self.b) * weighted_rho_cm)
+
+        # Debug: Print a sample of the FFT result
+        print("FFT Result (Simpson, sample):", fft_result_simpson[:10])
+
+        # Extract the real part of the FFT result
         a_simpson = np.real(fft_result_simpson)
 
         # Compute call option prices
         self.calls_simpson = (1 / np.pi) * np.exp(-self.alpha * self.log_strikes) * a_simpson
 
+        # Debug: Print a sample of the computed call prices
+        print("Call Prices (Simpson, sample):", self.calls_simpson[:10])
+
     def interpolate_prices(self):
         """Interpolate option prices for specific strikes."""
-        # Choose interpolation method based on available data
-        if hasattr(self, 'calls_rectangular'):
-            calls_to_use = self.calls_rectangular
-        elif hasattr(self, 'calls_simpson'):
+        # Ensure the computed prices are valid
+        if hasattr(self, 'calls_simpson') and self.calls_simpson is not None:
             calls_to_use = self.calls_simpson
+        elif hasattr(self, 'calls_rectangular') and self.calls_rectangular is not None:
+            calls_to_use = self.calls_rectangular
         else:
             raise ValueError("No option prices computed. Run compute_fft first.")
 
-        # Interpolation for the specific strikes
+        # Interpolate prices for the given strikes
         spline = interp1d(np.exp(self.log_strikes), calls_to_use, kind='cubic', fill_value="extrapolate")
         return spline(self.strikes)
 
     def price_options(self, rule="rectangular", simpson_weights=None):
-        """Price options based on selected integration rule."""
+        """Price options based on the selected integration rule."""
         self.compute_fft(rule, simpson_weights)
         return self.interpolate_prices()
-    
     
     def price_put_options(self, rule="rectangular", simpson_weights=None):
         """Price put options using put-call parity."""
@@ -228,8 +241,8 @@ class BatesModel:
         # Filter out-of-the-money (OTM) options
         otm_calls = combined_data[(combined_data['Strike'] > self.S0) & (combined_data['Bid_Call'] >= 0)].copy()
         otm_puts = combined_data[(combined_data['Strike'] < self.S0) & (combined_data['Bid_Put'] >= 0)].copy()
-        print("otm_calls: ", otm_calls.shape)
-        print("otm_puts: ", otm_puts.shape)
+        #print("otm_calls: ", otm_calls.shape)
+        #print("otm_puts: ", otm_puts.shape)
 
         # Combine OTM calls and puts
         otm_options = pd.concat([otm_calls, otm_puts], ignore_index=True)
@@ -267,4 +280,71 @@ class BatesModel:
         otm_options['Bates_Price'] = bates_prices
 
         return otm_options
+
+    def simulate_paths(self, n_paths, n_steps, seed=None):
+        """
+        Simulate stock price paths under the Bates model.
+
+        Parameters:
+            n_paths (int): Number of paths to simulate.
+            n_steps (int): Number of time steps per path.
+            seed (int, optional): Random seed for reproducibility.
+
+        Returns:
+            np.ndarray: Simulated stock price paths of shape (n_paths, n_steps + 1).
+        """
+        if seed is not None:
+            np.random.seed(seed)
+
+        dt = self.T / n_steps
+        S = np.zeros((n_paths, n_steps + 1))
+        S[:, 0] = self.S0
+
+        V = np.full(n_paths, self.V0)
+        for t in range(1, n_steps + 1):
+            # Generate random numbers
+            dW1 = np.random.normal(0, np.sqrt(dt), n_paths)
+            dW2 = np.random.normal(0, np.sqrt(dt), n_paths)
+            dJ = np.random.poisson(self.jump_intensity * dt, n_paths)
+
+            # Correlate dW2 with dW1
+            dW2 = self.rho * dW1 + np.sqrt(1 - self.rho**2) * dW2
+
+            # Update variance process (Heston model dynamics)
+            V = np.maximum(V + self.kappa * (self.eta - V) * dt + self.theta * np.sqrt(V) * dW2, 0)
+
+            # Update stock price process
+            jumps = dJ * (np.exp(self.jump_mean + self.jump_stddev * np.random.normal(0, 1, n_paths)) - 1)
+            S[:, t] = S[:, t - 1] * np.exp(
+                (self.r - self.q - 0.5 * V) * dt + np.sqrt(V) * dW1
+            ) * (1 + jumps)
+
+        return S
+
+    def price_down_and_out_put(self, K, H, n_paths=10000, n_steps=365, seed=None):
+        """
+        Price a down-and-out put option using Monte Carlo simulation.
+
+        Parameters:
+            K (float): Strike price of the option.
+            H (float): Barrier level (down-and-out).
+            n_paths (int): Number of Monte Carlo paths.
+            n_steps (int): Number of time steps per path.
+            seed (int, optional): Random seed for reproducibility.
+
+        Returns:
+            float: Monte Carlo price of the down-and-out put option.
+        """
+        paths = self.simulate_paths(n_paths, n_steps, seed)
+        dt = self.T / n_steps
+
+        # Check if the barrier is breached
+        barrier_breached = np.any(paths <= H, axis=1)
+
+        # Calculate payoff for paths that do not breach the barrier
+        final_prices = paths[:, -1]
+        payoffs = np.where(~barrier_breached, np.maximum(K - final_prices, 0), 0)
+
+        # Discount the payoff to present value
+        return np.exp(-self.r * self.T) * np.mean(payoffs)
 

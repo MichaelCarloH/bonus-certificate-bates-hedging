@@ -6,8 +6,7 @@ from scipy.optimize import minimize
 from datetime import datetime
 
 class BatesModelGlobalCalibrator:
-    def __init__(self, data_folder, S0, r, q, date=None, combined_data=None):
-        self.data_folder = data_folder
+    def __init__(self, S0, r, q, date=None, combined_data=None):
         self.S0 = S0
         self.r = r
         self.q = q
@@ -32,7 +31,7 @@ class BatesModelGlobalCalibrator:
 
         # Bounds for parameters
         bounds = {
-            'V0': (0.01, 1.0), 'kappa': (0.01, 2.0), 'eta': (0.01, 2.0), 'theta': (0.01, 1.0), 'rho': (-0.99, 0.0),
+            'V0': (0.01, 1.0), 'kappa': (0.01, 3.0), 'eta': (0.01, 2.0), 'theta': (0.01, 1.0), 'rho': (-0.99, 0.0),
             'jump_intensity': (0.01, 2.0), 'jump_mean': (0.01, 0.5), 'jump_stddev': (0.01, 0.5)
         }
 
