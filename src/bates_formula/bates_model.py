@@ -281,7 +281,7 @@ class BatesModel:
 
         return otm_options
 
-    def simulate_paths(self, n_paths, n_steps, seed=None):
+    def simulate_paths(self, n_paths, n_steps = None, seed=None):
         """
         Simulate stock price paths under the Bates model.
 
@@ -295,6 +295,9 @@ class BatesModel:
         """
         if seed is not None:
             np.random.seed(seed)
+
+        if n_steps is None:
+            n_steps = int(self.T * 365)  # Default to 365 steps per year scaled by maturity
 
         dt = self.T / n_steps
         S = np.zeros((n_paths, n_steps + 1))
@@ -321,7 +324,7 @@ class BatesModel:
 
         return S
 
-    def price_down_and_out_put(self, K, H, n_paths=10000, n_steps=365, seed=None):
+    def price_down_and_out_put(self, K, H, n_paths=10000, n_steps=None, seed=None, S0=None):
         """
         Price a down-and-out put option using Monte Carlo simulation.
 
@@ -331,12 +334,22 @@ class BatesModel:
             n_paths (int): Number of Monte Carlo paths.
             n_steps (int): Number of time steps per path.
             seed (int, optional): Random seed for reproducibility.
+            S0 (float, optional): Initial stock price. Defaults to the model's S0.
 
         Returns:
             float: Monte Carlo price of the down-and-out put option.
         """
+        if S0 is None:
+            S0 = self.S0  # Use the model's S0 if not provided
+
+        if n_steps is None:
+            n_steps = int(self.T * 365)  # Default to 365 steps per year scaled by maturity
+
+        # Temporarily override S0 for simulation
+        original_S0 = self.S0
+        self.S0 = S0
         paths = self.simulate_paths(n_paths, n_steps, seed)
-        dt = self.T / n_steps
+        self.S0 = original_S0  # Restore original S0
 
         # Check if the barrier is breached
         barrier_breached = np.any(paths <= H, axis=1)
