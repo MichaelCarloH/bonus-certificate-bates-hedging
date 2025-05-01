@@ -70,6 +70,46 @@ class BatesModel:
         # Calculate auxiliary variables (log strikes, v, u, rho_cm)
         self.calculate_auxiliary_variables()
 
+    def set_params(self, **kwargs):
+        """
+        Set model parameters dynamically.
+
+        Parameters:
+            kwargs: Dictionary of parameter names and their new values.
+        """
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise AttributeError(f"Invalid parameter: {key}")
+
+    def get_params(self):
+        """
+        Get current model parameters as a dictionary.
+
+        Returns:
+            dict: Dictionary of current model parameters.
+        """
+        return {
+            "S0": self.S0,
+            "r": self.r,
+            "q": self.q,
+            "V0": self.V0,
+            "kappa": self.kappa,
+            "eta": self.eta,
+            "theta": self.theta,
+            "rho": self.rho,
+            "T": self.T,
+            "alpha": self.alpha,
+            "N": self.N,
+            "eta_cm": self.eta_cm,
+            "b": self.b,
+            "strikes": self.strikes,
+            "jump_intensity": self.jump_intensity,
+            "jump_mean": self.jump_mean,
+            "jump_stddev": self.jump_stddev
+        }
+
     def calculate_auxiliary_variables(self):
         """Calculate log_strikes, v, u, and rho_cm based on model parameters."""
         # Define finer grid for log strikes
@@ -299,7 +339,7 @@ class BatesModel:
         if n_steps is None:
             n_steps = int(self.T * 365)  # Default to 365 steps per year scaled by maturity
 
-        dt = self.T / n_steps
+        dt = 1 / n_steps
         S = np.zeros((n_paths, n_steps + 1))
         S[:, 0] = self.S0
 
