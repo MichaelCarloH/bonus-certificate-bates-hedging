@@ -4,25 +4,11 @@ This repository contains the implementation and analysis for pricing and hedging
 
 ## Overview
 
-A Bonus Certificate (BC) provides an investor with exposure to a stock while offering an additional bonus payment if the stock price stays above a specified barrier level during the life of the product. However, if the stock price falls below a **lower barrier**, the bonus is no longer paid. The product has a single maturity and no principal protection.
-
-### Payoff Structure
-
-The payoff at maturity depends on the stock price at that time, the barrier levels, and whether the stock has breached the lower barrier level during the product's life.
-
-The three main payoff scenarios are:
-
-1. **Stock Price Above Bonus Level (B):**
-   - If the stock price ends up above the bonus level $\( B \)$, the investor receives the value of the stock at maturity $\( S_T \)$.
-   - **Payoff:** $\( \text{payoff}_{BC} = S_T \)$
-
-2. **Stock Price Between Barrier (L) and Bonus Level (B):**
-   - If the stock price ends up between the barrier $\( L \)$ and the bonus $\( B \)$, and the stock price has never fallen below the lower barrier $\( H \)$, the investor receives the bonus $\( B \)$.
-   - **Payoff:** $\( \text{payoff}_{BC} = B \)$
-
-3. **Stock Price Hits the Lower Barrier (H):**
-   - If the stock price hits the lower barrier $\( H \)$ at least once during the life of the product, the investor receives the value of the stock at maturity.
-   - **Payoff:** $\( \text{payoff}_{BC} = S_T \)$
+The project includes tools for:
+- Pricing Bonus Certificates using the Bates model.
+- Simulating stock price paths and calculating option prices.
+- Analyzing market data and visualizing results.
+- Calibrating the Bates model to market data.
 
 ### Structure of the Product
 
@@ -32,11 +18,89 @@ The three main payoff scenarios are:
 - **Barrier Level (L):** The level between which the stock must end up for the bonus to be paid.
 - **Lower Barrier (H):** If the stock price hits this barrier at any time during the product's life, the investor will receive the stock price at maturity.
 
-### Bank’s Strategy Summary
+### Payoff Structure
 
-Yes, at the most basic level, the core components of the hedge involve being:
+- If the stock price hits the lower barrier \( H \) at least once during the life of the product, the investor receives the value of the stock at maturity.
+- **Payoff:** \( \text{payoff}_{BC} = S_T \)
 
-* **Long Stock**
-* **Long the specific exotic option** that provides the conditional bonus.
+## Project Structure
 
-Specifically, for the uncapped Bonus Certificate, this option is a **Down-and-Out Put** (Strike \(B\), Barrier \(L\)). The bank holds the stock for the base payoff and synthetically replicates the long position in this option via dynamic hedging to cover the bonus feature. So, "long stock, long option" – there we go!
+```
+main.py
+pyproject.toml
+README.md
+requirements.txt
+uv.lock
+data/
+    marketDataClose25-04/
+        [CSV files with market data]
+    pdf/
+        [PDF files with additional data]
+notebooks/
+    bc_pricing.ipynb
+    market_data_analysis.ipynb
+src/
+    bates_formula/
+        [Bates model implementation and calibration]
+    data_processing/
+        [Market data processing tools]
+    dividends/
+        [Dividend estimation tools]
+    interest_rates/
+        [Interest rate calculation tools]
+    payout/
+        [Payout calculation tools]
+```
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd bonus-certificate-bates-hedging
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+### Running the Main Script
+Run the main script to execute the core functionality:
+```bash
+python main.py
+```
+
+### Jupyter Notebooks
+- `notebooks/bc_pricing.ipynb`: Demonstrates the implementation of the Bates formula for pricing Bonus Certificates.
+- `notebooks/market_data_analysis.ipynb`: Visualizes and analyzes market data.
+
+### Data
+Market data is stored in the `data/marketDataClose25-04/` folder. Each CSV file contains market data for a specific date.
+
+## Key Features
+
+### Bates Model
+- Simulates stock price paths using the Bates model.
+- Calibrates the model to market data.
+- Prices options and Bonus Certificates.
+
+### Market Data Analysis
+- Processes and visualizes market data.
+- Calculates implied volatility and interest rates.
+
+### Payout Calculation
+- Computes the payout structure for Bonus Certificates.
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Submit a pull request with a detailed description of your changes.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
