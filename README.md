@@ -1,71 +1,42 @@
-# Credit Risk Modeling for Startups (May 2025)
+# Bonus Certificate Pricing and Hedging
 
-## Objective  
-Improve credit risk predictions for funded startups using enriched external data and machine learning, with a focus on interpretability and practical deployment.
+This repository contains the implementation and analysis for pricing and hedging a **Bonus Certificate (BC)** linked to a specific stock (AIG in this case). The Bonus Certificate is an exotic financial product that provides potential upside with a cap, contingent on the stock price and certain barriers.
 
-## Project Summary  
-Startups often suffer high default rates, and traditional credit scoring lacks timely, rich financial data. Our solution integrates Orbis firm-level data and applies **XGBoost** to predict defaults, achieving an **AUC of 0.84**. We focus on identifying high-risk firms and explain predictions using **SHAP values**. The output feeds into an interactive dashboard that enables informed decisions by credit risk managers.
+## Overview
 
----
+A Bonus Certificate (BC) provides an investor with exposure to a stock while offering an additional bonus payment if the stock price stays above a specified barrier level during the life of the product. However, if the stock price falls below a **lower barrier**, the bonus is no longer paid. The product has a single maturity and no principal protection.
 
-## Data Pipeline  
+### Payoff Structure
 
-### Enrichment & Matching  
-- **Source:** Internal startup data + Orbis database (via Matching Research Tool)  
-- **Region:** EU firms only (focus + lower compute)  
-- **Match Rate:** ~60%  
-- **Final Dataset:** ~5,500 companies, 160+ features  
+The payoff at maturity depends on the stock price at that time, the barrier levels, and whether the stock has breached the lower barrier level during the product's life.
 
-### Preprocessing  
-- **Missing Values:** Median imputation  
-- **NACE Codes:** Normalized  
-- **Target Variable:** Binary (Active vs Inactive)  
-- **Feature Engineering:** Financial ratios, interactions, encodings  
+The three main payoff scenarios are:
 
----
+1. **Stock Price Above Bonus Level (B):**
+   - If the stock price ends up above the bonus level \( B \), the investor receives the value of the stock at maturity \( S_T \).
+   - **Payoff:** \( \text{payoff}_{BC} = S_T \)
 
-## Modeling  
+2. **Stock Price Between Barrier (L) and Bonus Level (B):**
+   - If the stock price ends up between the barrier \( L \) and the bonus \( B \), and the stock price has never fallen below the lower barrier \( H \), the investor receives the bonus \( B \).
+   - **Payoff:** \( \text{payoff}_{BC} = B \)
 
-### Algorithm  
-- **Model:** XGBoost  
-- **Loss Function:** Cost-sensitive (penalizes missed defaults)  
-- **Interpretability:** SHAP (local + global feature explanations)
+3. **Stock Price Hits the Lower Barrier (H):**
+   - If the stock price hits the lower barrier \( H \) at least once during the life of the product, the investor receives the value of the stock at maturity.
+   - **Payoff:** \( \text{payoff}_{BC} = S_T \)
 
-### Metrics  
-- **ROC AUC:** 0.845  
-- **Precision:** 0.818  
-- **MAE:** 0.298  
-- **TSS (Optimal threshold = 0.3601):** 0.5445  
-- **Calibration:** Strong alignment between predicted and observed default rates  
+### Structure of the Product
 
----
+- **Underlying Asset:** Stock of AIG
+- **Maturity:** At a specified date
+- **Bonus Level (B):** The level at which the product pays out if the stock price is above it at maturity.
+- **Barrier Level (L):** The level between which the stock must end up for the bonus to be paid.
+- **Lower Barrier (H):** If the stock price hits this barrier at any time during the product's life, the investor will receive the stock price at maturity.
 
-## Dashboard: RAAD (Risk Assessment from Augmented Data)  
+### Bank’s Strategy
 
-- **Displays:**  
-  - Credit score = \((1 - P_0) \times 100\)  
-  - Key Orbis financials  
-  - AI Assistant summary via LLM (ChatGPT 4.1 with browsing)  
-
----
-
-## Future Development  
-
-### Next Steps  
-- CI/CD pipeline for retraining and updates  
-- Integrate internal data (ERP, payment logs)  
-- Deploy RAAD Dashboard on **AWS/Azure**  
-- Extend to global firms and adapt to local accounting standards  
-
----
-
-## Tech Stack  
-- **Modeling:** Python, XGBoost, SHAP  
-- **Data:** Orbis, internal credit data  
-- **Frontend:** Streamlit / Dash (for dashboard)  
-- **LLM Assistant:** OpenAI ChatGPT 4.1 (w/ web search)  
-- **Deployment:** Docker, Azure (planned)
-
----
-
-🚀 **Proof of Concept complete – contributions, ideas, and extensions welcome!**
+To hedge the Bonus Certificate, the bank will:
+- **Long the stock** to capture dividends.
+- **Sell a Down-and-In Binary Put (DIBP)** at the lower barrier \( L \).
+- **Buy a Down-and-In Binary Put (DIBP)** at the higher barrier \( H \).
+- These positions are combined to create a **synthetic payout** similar to the Bonus Certificate payoff.
+- The bank’s exposure is between the barriers \( H \) and \( L \), and its maximum loss will be covered by a **risk-free bank account**.
