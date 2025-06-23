@@ -1,27 +1,60 @@
 # Bonus Certificate Pricing and Hedging
 
-This repository contains the implementation and analysis for pricing and hedging a **Bonus Certificate (BC)** linked to a specific stock (AIG in this case). The Bonus Certificate is an exotic financial product that provides potential upside with a cap, contingent on the stock price and certain barriers.
+This repository contains the full implementation and analysis for **pricing and hedging a Bonus Certificate (BC)** linked to the stock of American International Group (AIG). The BC is an exotic financial product that offers potential upside with partial downside protection, depending on the behavior of the underlying stock relative to specified barriers.
 
-## Overview
+![image](https://github.com/user-attachments/assets/f5cb0a29-4422-4077-92ec-b0ae979695f6)
 
-The project includes tools for:
-- Pricing Bonus Certificates using the Bates model.
-- Simulating stock price paths and calculating option prices.
-- Analyzing market data and visualizing results.
-- Calibrating the Bates model to market data.
 
-### Structure of the Product
+## 📘 Overview
 
-- **Underlying Asset:** Stock of AIG
-- **Maturity:** At a specified date
-- **Bonus Level (B):** The level at which the product pays out if the stock price is above it at maturity.
-- **Barrier Level (L):** The level between which the stock must end up for the bonus to be paid.
-- **Lower Barrier (H):** If the stock price hits this barrier at any time during the product's life, the investor will receive the stock price at maturity.
+This project includes:
 
-### Payoff Structure
+- Pricing Bonus Certificates using the **Bates stochastic volatility model** with jumps.
+- Calibrating the Bates model to real market option data.
+- Simulating stock price paths using **Monte Carlo methods**.
+- Implementing a **delta-hedging strategy** to mitigate issuer risk.
+- Analyzing investor and bank outcomes under realistic scenarios.
 
-- If the stock price hits the lower barrier \( H \) at least once during the life of the product, the investor receives the value of the stock at maturity.
-- **Payoff:** \( \text{payoff}_{BC} = S_T \)
+## 💡 Product Structure
+
+- **Underlying Asset:** AIG stock
+- **Issue Date:** April 25, 2025
+- **Maturity Date:** March 20, 2026
+- **Initial Stock Price:** $81.25
+- **Bonus Level (B):** $85
+- **Barrier Level (H):** $55
+- **Certificate Price:** $90
+
+### Payoff Scenarios
+
+- If the stock **never touches the barrier** and ends **below B**:  
+  → Payoff = **B**
+
+- If the stock **never touches the barrier** and ends **above B**:  
+  → Payoff = **\( S_T \)**
+
+- If the barrier is breached at any time:  
+  → Payoff = **\( S_T \)**
+
+This gives the investor capped upside, conditional downside protection, and no early redemption.
+
+![image](https://github.com/user-attachments/assets/243c7b06-4d82-4674-9636-1a5c02d88ce5)
+
+## 📊 Model Implementation
+
+The project uses the **Bates model**, an extension of the Heston model that incorporates jumps:
+
+- Stochastic volatility captured by a mean-reverting process.
+- Jump-diffusion behavior through a Poisson process.
+
+### Calibration
+
+The model is calibrated to liquid option market data using the Carr-Madan FFT method. 
+![image](https://github.com/user-attachments/assets/f70381cd-b2b6-4afe-951f-96f848a1a8bc)
+
+
+## 🔧 Project Structure
+
 
 ## Project Structure
 
